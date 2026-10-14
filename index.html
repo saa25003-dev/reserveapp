@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>施設予約管理システム - reserveapp</title>
+    <!-- Favicon (404エラー防止用インラインSVG) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FontAwesome Icons (crossorigin / referrerpolicy を追加) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -404,12 +406,30 @@
 
         // Googleログイン処理
         googleLoginBtn.addEventListener('click', async () => {
+            if (googleLoginBtn.disabled) return;
+            
+            // 二重クリック防止のためボタンを一時無効化
+            googleLoginBtn.disabled = true;
+            googleLoginBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
             try {
                 await signInWithPopup(auth, provider);
                 showToast('ログインしました', 'success');
             } catch (error) {
                 console.error("Login Error:", error);
-                showToast('ログインに失敗しました: ' + error.message, 'error');
+                
+                // キャンセルや重複リクエストの場合はエラー出力を抑制
+                if (error.code === 'auth/cancelled-popup-request') {
+                    console.warn("ログイン処理が重複したためキャンセルされました。");
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    showToast('ログイン画面が閉じられました', 'warning');
+                } else {
+                    showToast('ログインに失敗しました: ' + error.message, 'error');
+                }
+            } finally {
+                // ボタンの有効化を復元
+                googleLoginBtn.disabled = false;
+                googleLoginBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
 
