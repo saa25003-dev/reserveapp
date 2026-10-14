@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>施設予約管理システム - reserveapp</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="h-full text-slate-800 flex flex-col antialiased">
+
+    <!-- ヘッダー -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-500/50 rounded-lg">
+                    <i class="fa-solid me-1 fa-calendar-check text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">施設予約システム</h1>
+                    <p class="text-xs text-indigo-200">reserveapp</p>
+                </div>
+            </div>
+
+            <!-- ログインユーザー情報 & アクション -->
+            <div id="user-header-info" class="hidden items-center space-x-4">
+                <div class="flex items-center space-x-3">
+                    <img id="user-avatar" src="" alt="Avatar" class="w-9 h-9 rounded-full border-2 border-indigo-300 object-cover">
+                    <div class="hidden sm:block text-right">
+                        <p id="user-display-name" class="text-sm font-semibold leading-none"></p>
+                        <p id="user-email" class="text-xs text-indigo-200 mt-1"></p>
+                    </div>
+                </div>
+                <button id="logout-btn" class="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-xs font-medium rounded-lg transition border border-indigo-500/50 flex items-center space-x-1 shadow-sm">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>ログアウト</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- トースト通知コンテナ -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 max-w-sm w-full px-4 pointer-events-none"></div>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ログイン画面（未ログイン時表示） -->
+        <div id="login-section" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center">
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">ログインが必要です</h2>
+            <p class="text-slate-500 text-sm mb-8 leading-relaxed">
+                体育館や実習室の予約管理を利用するには、Googleアカウントでログインしてください。
+            </p>
+            <button id="google-login-btn" class="w-full flex items-center justify-center space-x-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 border border-slate-300 rounded-xl shadow-sm transition-all transform active:scale-95">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Google アカウントでログイン</span>
+            </button>
+        </div>
+
+        <!-- 予約管理ダッシュボード（ログイン時表示） -->
+        <div id="app-section" class="hidden space-y-8">
+            
+            <!-- 概要ステータスカード -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+                        <i class="fa-solid fa-calendar-day text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">総予約件数</p>
+                        <p id="stat-total" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <i class="fa-solid fa-clock text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">本日の予約</p>
+                        <p id="stat-today" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-lg">
+                        <i class="fa-solid fa-user-check text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">あなたの予約</p>
+                        <p id="stat-my" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- 左側：新規予約入力フォーム -->
+                <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+                    <h2 class="text-lg font-bold text-slate-800 mb-5 flex items-center space-x-2">
+                        <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
+                        <span>新規施設予約</span>
+                    </h2>
+
+                    <form id="reservation-form" class="space-y-4">
+                        <!-- 1. 施設名 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">施設名 <span class="text-red-500">*</span></label>
+                            <select id="facility" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                                <option value="" disabled selected>選択してください</option>
+                                <option value="体育館">体育館</option>
+                                <option value="実習室A">実習室A</option>
+                                <option value="実習室B">実習室B</option>
+                                <option value="会議室1">会議室1</option>
+                                <option value="パソコン室">パソコン室</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. 利用日 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">利用日 <span class="text-red-500">*</span></label>
+                            <input type="date" id="date" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                        </div>
+
+                        <!-- 3. 利用時間帯 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">利用時間帯 <span class="text-red-500">*</span></label>
+                            <select id="timeSlot" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                                <option value="" disabled selected>選択してください</option>
+                                <option value="1時間目 (08:50〜09:40)">1時間目 (08:50〜09:40)</option>
+                                <option value="2時間目 (09:50〜10:40)">2時間目 (09:50〜10:40)</option>
+                                <option value="3時間目 (10:50〜11:40)">3時間目 (10:50〜11:40)</option>
+                                <option value="4時間目 (11:50〜12:40)">4時間目 (11:50〜12:40)</option>
+                                <option value="5時間目 (13:30〜14:20)">5時間目 (13:30〜14:20)</option>
+                                <option value="6時間目 (14:30〜15:20)">6時間目 (14:30〜15:20)</option>
+                                <option value="7時間目 (15:30〜16:20)">7時間目 (15:30〜16:20)</option>
+                                <option value="放課後 (16:30〜18:00)">放課後 (16:30〜18:00)</option>
+                            </select>
+                        </div>
+
+                        <!-- 4. 予約者名 (ログインユーザーの表示名をデフォルト挿入) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">予約者名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="userName" placeholder="例:  Yamada Taro" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                        </div>
+
+                        <!-- 5. 利用目的 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">利用目的 <span class="text-red-500">*</span></label>
+                            <textarea id="purpose" rows="3" placeholder="例: バスケットボール部の練習、授業の試作等" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"></textarea>
+                        </div>
+
+                        <!-- 送信ボタン -->
+                        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 active:scale-[0.99]">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>予約を登録する</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 右側：予約一覧 & フィルター -->
+                <div class="lg:col-span-7 space-y-4">
+                    
+                    <!-- 絞り込みフィルターコントロール -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4">
+                        <div class="flex flex-wrap gap-3 items-center justify-between">
+                            <div class="flex items-center space-x-2 text-slate-700 text-sm font-semibold">
+                                <i class="fa-solid fa-filter text-indigo-500"></i>
+                                <span>絞り込み検索</span>
+                            </div>
+                            <button id="reset-filter-btn" class="text-xs text-indigo-600 hover:underline">条件クリア</button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                            <select id="filter-facility" class="rounded-xl border-slate-200 border bg-slate-50 text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL">すべての施設</option>
+                                <option value="体育館">体育館</option>
+                                <option value="実習室A">実習室A</option>
+                                <option value="実習室B">実習室B</option>
+                                <option value="会議室1">会議室1</option>
+                                <option value="パソコン室">パソコン室</option>
+                            </select>
+
+                            <input type="date" id="filter-date" class="rounded-xl border-slate-200 border bg-slate-50 text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                            <input type="text" id="filter-search" placeholder="予約者・目的で検索" class="rounded-xl border-slate-200 border bg-slate-50 text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- 予約カードリスト -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-list-check text-indigo-600"></i>
+                                <span>予約一覧</span>
+                            </h3>
+                            <span id="reservation-count-badge" class="text-xs font-semibold px-2.5 py-1 bg-indigo-100 text-indigo-700 rounded-full">0件</span>
+                        </div>
+
+                        <!-- リスト本体 -->
+                        <div id="reservation-list" class="divide-y divide-slate-100 min-h-[200px]">
+                            <div class="p-8 text-center text-slate-400">
+                                <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-500 mb-2"></i>
+                                <p class="text-xs">データを読み込んでいます...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 編集モーダル -->
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 transform transition-all">
+            <div class="flex items-center justify-between mb-4 border-b pb-3">
+                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <i class="fa-solid fa-pen text-indigo-600"></i>
+                    <span>予約情報の変更</span>
+                </h3>
+                <button id="close-modal-btn" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="edit-form" class="space-y-4">
+                <input type="hidden" id="edit-id">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">施設名</label>
+                    <select id="edit-facility" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm">
+                        <option value="体育館">体育館</option>
+                        <option value="実習室A">実習室A</option>
+                        <option value="実習室B">実習室B</option>
+                        <option value="会議室1">会議室1</option>
+                        <option value="パソコン室">パソコン室</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">利用日</label>
+                        <input type="date" id="edit-date" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">時間帯</label>
+                        <select id="edit-timeSlot" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm">
+                            <option value="1時間目 (08:50〜09:40)">1時間目 (08:50〜09:40)</option>
+                            <option value="2時間目 (09:50〜10:40)">2時間目 (09:50〜10:40)</option>
+                            <option value="3時間目 (10:50〜11:40)">3時間目 (10:50〜11:40)</option>
+                            <option value="4時間目 (11:50〜12:40)">4時間目 (11:50〜12:40)</option>
+                            <option value="5時間目 (13:30〜14:20)">5時間目 (13:30〜14:20)</option>
+                            <option value="6時間目 (14:30〜15:20)">6時間目 (14:30〜15:20)</option>
+                            <option value="7時間目 (15:30〜16:20)">7時間目 (15:30〜16:20)</option>
+                            <option value="放課後 (16:30〜18:00)">放課後 (16:30〜18:00)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">予約者名</label>
+                    <input type="text" id="edit-userName" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">利用目的</label>
+                    <textarea id="edit-purpose" rows="3" required class="w-full rounded-xl border-slate-300 border bg-slate-50 px-3 py-2 text-sm"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-modal-btn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Script (ES Modules) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 提供された Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDYtfyNdWiZ72k74KaDNYUBziIvAbd4f8M",
+            authDomain: "apuri-a86b3.firebaseapp.com",
+            projectId: "apuri-a86b3",
+            storageBucket: "apuri-a86b3.firebasestorage.app",
+            messagingSenderId: "331099808318",
+            appId: "1:331099808318:web:748a0413c161f19d97676f",
+            measurementId: "G-6RDWVSTYLP"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // 状態管理変数
+        let currentUser = null;
+        let allReservations = [];
+        let unsubscribeSnapshot = null;
+
+        // DOM要素
+        const loginSection = document.getElementById('login-section');
+        const appSection = document.getElementById('app-section');
+        const userHeaderInfo = document.getElementById('user-header-info');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userAvatar = document.getElementById('user-avatar');
+        const userDisplayName = document.getElementById('user-display-name');
+        const userEmail = document.getElementById('user-email');
+        const reservationForm = document.getElementById('reservation-form');
+        const userNameInput = document.getElementById('userName');
+        const dateInput = document.getElementById('date');
+        const reservationList = document.getElementById('reservation-list');
+        const reservationCountBadge = document.getElementById('reservation-count-badge');
+
+        // フィルター DOM
+        const filterFacility = document.getElementById('filter-facility');
+        const filterDate = document.getElementById('filter-date');
+        const filterSearch = document.getElementById('filter-search');
+        const resetFilterBtn = document.getElementById('reset-filter-btn');
+
+        // モーダル DOM
+        const editModal = document.getElementById('edit-modal');
+        const editForm = document.getElementById('edit-form');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const cancelModalBtn = document.getElementById('cancel-modal-btn');
+
+        // デフォルトの日付に「今日」を設定
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateInput.value = todayStr;
+
+        // カスタムトースト通知 (alertの代わり)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                info: 'bg-indigo-600 text-white'
+            };
+
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-triangle-exclamation',
+                warning: 'fa-circle-exclamation',
+                info: 'fa-circle-info'
+            };
+
+            toast.className = `pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl shadow-lg transition-all transform translate-y-2 opacity-0 ${bgColors[type] || bgColors.info}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.info}"></i>
+                <span class="text-xs font-semibold flex-1">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // アニメーション表示
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            // 3.5秒後に自動消去
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Googleログイン処理
+        googleLoginBtn.addEventListener('click', async () => {
+            try {
+                await signInWithPopup(auth, provider);
+                showToast('ログインしました', 'success');
+            } catch (error) {
+                console.error("Login Error:", error);
+                showToast('ログインに失敗しました: ' + error.message, 'error');
+            }
+        });
+
+        // ログアウト処理
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showToast('ログアウトしました', 'info');
+            } catch (error) {
+                showToast('ログアウトエラー: ' + error.message, 'error');
+            }
+        });
+
+        // 認証状態の監視
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                // ログイン時画面制御
+                loginSection.classList.add('hidden');
+                appSection.classList.remove('hidden');
+                userHeaderInfo.classList.remove('hidden');
+                userHeaderInfo.classList.add('flex');
+
+                userAvatar.src = user.photoURL || 'https://placehold.co/100x100/6366f1/ffffff?text=U';
+                userDisplayName.textContent = user.displayName || 'ユーザー';
+                userEmail.textContent = user.email || '';
+
+                // 予約者名に表示名を自動入力
+                if (!userNameInput.value) {
+                    userNameInput.value = user.displayName || '';
+                }
+
+                // リアルタイムデータ購読の開始
+                subscribeToReservations();
+            } else {
+                // 未ログイン時画面制御
+                loginSection.classList.remove('hidden');
+                appSection.classList.add('hidden');
+                userHeaderInfo.classList.add('hidden');
+                userHeaderInfo.classList.remove('flex');
+
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                }
+            }
+        });
+
+        // Firestore リアルタイム同期
+        function subscribeToReservations() {
+            // Firestoreパスルールに則り、アプリ公開用データコレクションを参照
+            const colRef = collection(db, 'reservations');
+
+            unsubscribeSnapshot = onSnapshot(colRef, (snapshot) => {
+                allReservations = [];
+                snapshot.forEach((docSnap) => {
+                    allReservations.push({
+                        id: docSnap.id,
+                        ...docSnap.data()
+                    });
+                });
+
+                // 日付が新しい順、時間帯順にソート
+                allReservations.sort((a, b) => {
+                    if (a.date !== b.date) return b.date.localeCompare(a.date);
+                    return a.timeSlot.localeCompare(b.timeSlot);
+                });
+
+                updateStats();
+                renderReservations();
+            }, (error) => {
+                console.error("Firestore Error:", error);
+                showToast('データの取得に失敗しました', 'error');
+            });
+        }
+
+        // ダッシュボード統計更新
+        function updateStats() {
+            document.getElementById('stat-total').textContent = allReservations.length;
+
+            const today = new Date().toISOString().split('T')[0];
+            const todayCount = allReservations.filter(r => r.date === today).length;
+            document.getElementById('stat-today').textContent = todayCount;
+
+            const myCount = allReservations.filter(r => r.uid === currentUser?.uid).length;
+            document.getElementById('stat-my').textContent = myCount;
+        }
+
+        // フィルタリングとリスト描画
+        function renderReservations() {
+            const facilityVal = filterFacility.value;
+            const dateVal = filterDate.value;
+            const searchVal = filterSearch.value.trim().toLowerCase();
+
+            const filtered = allReservations.filter(r => {
+                const matchFacility = (facilityVal === 'ALL' || r.facility === facilityVal);
+                const matchDate = (!dateVal || r.date === dateVal);
+                const matchSearch = (!searchVal || 
+                    (r.userName && r.userName.toLowerCase().includes(searchVal)) ||
+                    (r.purpose && r.purpose.toLowerCase().includes(searchVal))
+                );
+                return matchFacility && matchDate && matchSearch;
+            });
+
+            reservationCountBadge.textContent = `${filtered.length}件`;
+
+            if (filtered.length === 0) {
+                reservationList.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
+                        <p class="text-xs">条件に該当する予約データがありません。</p>
+                    </div>
+                `;
+                return;
+            }
+
+            reservationList.innerHTML = filtered.map(r => {
+                const isOwner = r.uid === currentUser?.uid;
+                return `
+                    <div class="p-4 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">${escapeHtml(r.facility)}</span>
+                                <span class="text-xs font-semibold text-slate-700"><i class="fa-regular fa-clock me-1 text-slate-400"></i>${escapeHtml(r.timeSlot)}</span>
+                            </div>
+                            <div class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                                <i class="fa-regular fa-calendar text-indigo-500"></i>
+                                <span>${escapeHtml(r.date)}</span>
+                            </div>
+                            <p class="text-xs text-slate-600 line-clamp-1">
+                                <span class="font-medium text-slate-700">利用目的:</span> ${escapeHtml(r.purpose)}
+                            </p>
+                            <div class="text-[11px] text-slate-400 flex items-center space-x-2 pt-1">
+                                <span><i class="fa-regular fa-user me-1"></i>予約者: ${escapeHtml(r.userName)}</span>
+                            </div>
+                        </div>
+
+                        <!-- アクションボタン (削除・編集) -->
+                        <div class="flex items-center space-x-2 self-end sm:self-center">
+                            <button onclick="openEditModal('${r.id}')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                                <i class="fa-solid fa-pen text-[10px]"></i>
+                                <span>編集</span>
+                            </button>
+                            <button onclick="deleteReservation('${r.id}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                <span>削除</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // HTMLエスケープヘルパー
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 予約の新規登録
+        reservationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentUser) {
+                showToast('ログインが必要です', 'error');
+                return;
+            }
+
+            const facility = document.getElementById('facility').value;
+            const date = document.getElementById('date').value;
+            const timeSlot = document.getElementById('timeSlot').value;
+            const userName = document.getElementById('userName').value.trim();
+            const purpose = document.getElementById('purpose').value.trim();
+
+            if (!facility || !date || !timeSlot || !userName || !purpose) {
+                showToast('すべての必須項目を入力してください', 'warning');
+                return;
+            }
+
+            // 【発展機能】重複予約防止チェック (同じ施設・同じ日・同じ時間帯)
+            const isConflict = allReservations.some(r => 
+                r.facility === facility && 
+                r.date === date && 
+                r.timeSlot === timeSlot
+            );
+
+            if (isConflict) {
+                showToast(`【重複】${facility} の ${date} ${timeSlot} は既に予約されています`, 'warning');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50');
+
+            try {
+                await addDoc(collection(db, 'reservations'), {
+                    facility,
+                    date,
+                    timeSlot,
+                    userName,
+                    purpose,
+                    uid: currentUser.uid,
+                    userEmail: currentUser.email,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast('予約を完了しました！', 'success');
+
+                // フォームのクリア（予約者名は保持）
+                document.getElementById('purpose').value = '';
+                document.getElementById('facility').selectedIndex = 0;
+                document.getElementById('timeSlot').selectedIndex = 0;
+
+            } catch (error) {
+                console.error("Save Error:", error);
+                showToast('登録に失敗しました: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50');
+            }
+        });
+
+        // 予約の削除
+        window.deleteReservation = async function(id) {
+            // カスタム確認ダイアログの代わりに簡単な処理
+            const target = allReservations.find(r => r.id === id);
+            if (!target) return;
+
+            // 即時削除の代わりにダブルクリック的確認メッセージを表示
+            if (!confirm(`「${target.facility} (${target.date})」の予約を削除してよろしいですか？`)) {
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(db, 'reservations', id));
+                showToast('予約を削除しました', 'info');
+            } catch (error) {
+                showToast('削除エラー: ' + error.message, 'error');
+            }
+        };
+
+        // 編集モーダルを開く
+        window.openEditModal = function(id) {
+            const target = allReservations.find(r => r.id === id);
+            if (!target) return;
+
+            document.getElementById('edit-id').value = target.id;
+            document.getElementById('edit-facility').value = target.facility;
+            document.getElementById('edit-date').value = target.date;
+            document.getElementById('edit-timeSlot').value = target.timeSlot;
+            document.getElementById('edit-userName').value = target.userName;
+            document.getElementById('edit-purpose').value = target.purpose;
+
+            editModal.classList.remove('hidden');
+        };
+
+        // モーダルを閉じる
+        function closeEditModal() {
+            editModal.classList.add('hidden');
+        }
+
+        closeModalBtn.addEventListener('click', closeEditModal);
+        cancelModalBtn.addEventListener('click', closeEditModal);
+
+        // 編集保存
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const facility = document.getElementById('edit-facility').value;
+            const date = document.getElementById('edit-date').value;
+            const timeSlot = document.getElementById('edit-timeSlot').value;
+            const userName = document.getElementById('edit-userName').value.trim();
+            const purpose = document.getElementById('edit-purpose').value.trim();
+
+            // 重複チェック (自身以外の予約と重複しないか)
+            const isConflict = allReservations.some(r => 
+                r.id !== id &&
+                r.facility === facility && 
+                r.date === date && 
+                r.timeSlot === timeSlot
+            );
+
+            if (isConflict) {
+                showToast(`【重複】${facility} の ${date} ${timeSlot} は他の予約が入っています`, 'warning');
+                return;
+            }
+
+            try {
+                await updateDoc(doc(db, 'reservations', id), {
+                    facility,
+                    date,
+                    timeSlot,
+                    userName,
+                    purpose,
+                    updatedAt: serverTimestamp()
+                });
+                showToast('予約情報を更新しました', 'success');
+                closeEditModal();
+            } catch (error) {
+                showToast('更新エラー: ' + error.message, 'error');
+            }
+        });
+
+        // フィルターイベントの登録
+        filterFacility.addEventListener('change', renderReservations);
+        filterDate.addEventListener('change', renderReservations);
+        filterSearch.addEventListener('input', renderReservations);
+
+        resetFilterBtn.addEventListener('click', () => {
+            filterFacility.value = 'ALL';
+            filterDate.value = '';
+            filterSearch.value = '';
+            renderReservations();
+        });
+    </script>
+</body>
+</html>
